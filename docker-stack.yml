@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  firebase-emulator:
+    image: ${DOCKER_IMAGE:-kua-waiting-list:latest}
+    ports:
+      - "4100:4100"   # Emulator UI
+      - "8282:8282"   # Firestore
+      - "9190:9190"   # Auth
+      - "9292:9292"   # Storage
+      - "5100:5100"   # Functions
+    environment:
+      - GCP_PROJECT=${GCP_PROJECT:-kua-waiting-list-dev}
+      - APP_ENV=${APP_ENV:-production}
+      - FIRESTORE_EMULATOR_HOST=0.0.0.0:8282
+      - FIREBASE_AUTH_EMULATOR_HOST=0.0.0.0:9190
+      - FIREBASE_STORAGE_EMULATOR_HOST=0.0.0.0:9292
+      - WHATSAPP_API_URL=${WHATSAPP_API_URL}
+      - WHATSAPP_API_KEY=${WHATSAPP_API_KEY}
+    volumes:
+      - firebase-data:/app/.firebase
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+    networks:
+      - kua-network
+
+networks:
+  kua-network:
+    driver: overlay
+
+volumes:
+  firebase-data:

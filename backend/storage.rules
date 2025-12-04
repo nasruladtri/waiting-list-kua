@@ -1,0 +1,72 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'superadmin';
+    }
+    
+    function isAdminKUA() {
+      return isAuthenticated() && getUserRole() == 'admin_kua';
+    }
+    
+    function isAdminDukcapil() {
+      return isAuthenticated() && getUserRole() == 'admin_dukcapil';
+    }
+    
+    function isValidFileType() {
+      return request.resource.contentType.matches('image/.*') 
+          || request.resource.contentType == 'application/pdf';
+    }
+    
+    function isValidFileSize() {
+      // Max 5MB
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Marriage application documents
+    match /marriage-documents/{userId}/{applicationId}/{fileName} {
+      // Read: owner, semua admin, dan superadmin
+      allow read: if isAuthenticated() 
+                  && (request.auth.uid == userId 
+                      || isSuperAdmin() 
+                      || isAdminKUA() 
+                      || isAdminDukcapil());
+      
+      // Write: hanya owner yang bisa upload dokumen untuk aplikasi sendiri
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && isValidFileType()
+                   && isValidFileSize();
+      
+      // Delete: owner dan superadmin
+      allow delete: if isAuthenticated() 
+                    && (request.auth.uid == userId || isSuperAdmin());
+    }
+    
+    // Profile pictures
+    match /profile-pictures/{userId}/{fileName} {
+      // Read: semua authenticated user
+      allow read: if isAuthenticated();
+      
+      // Write: hanya owner
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && request.resource.contentType.matches('image/.*')
+                   && isValidFileSize();
+      
+      // Delete: owner dan superadmin
+      allow delete: if isAuthenticated() 
+                    && (request.auth.uid == userId || isSuperAdmin());
+    }
+  }
+}

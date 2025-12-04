@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  firebase-emulator:
+    build:
+      context: .
+      dockerfile: docker/emulators.Dockerfile
+    container_name: kua-firebase-emulator
+    ports:
+      - "4100:4100" # Emulator UI
+      - "8282:8282" # Firestore
+      - "9190:9190" # Auth
+      - "9292:9292" # Storage
+      - "5100:5100" # Functions
+    environment:
+      - GCP_PROJECT=kua-waiting-list-dev
+      - APP_ENV=development
+      - FIRESTORE_EMULATOR_HOST=0.0.0.0:8282
+      - FIREBASE_AUTH_EMULATOR_HOST=0.0.0.0:9190
+      - FIREBASE_STORAGE_EMULATOR_HOST=0.0.0.0:9292
+    volumes:
+      - ./backend:/app
+      - firebase-data:/app/.firebase
+    restart: unless-stopped
+    networks:
+      - kua-network
+
+networks:
+  kua-network:
+    driver: bridge
+
+volumes:
+  firebase-data:

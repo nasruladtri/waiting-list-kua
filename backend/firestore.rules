@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'superadmin';
+    }
+    
+    function isAdminKUA() {
+      return isAuthenticated() && getUserRole() == 'admin_kua';
+    }
+    
+    function isAdminDukcapil() {
+      return isAuthenticated() && getUserRole() == 'admin_dukcapil';
+    }
+    
+    function isUser() {
+      return isAuthenticated() && getUserRole() == 'user';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Semua authenticated user bisa read user data
+      allow read: if isAuthenticated();
+      
+      // User bisa create profile sendiri saat register
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // User bisa update profile sendiri, superadmin bisa update semua
+      allow update: if isOwner(userId) || isSuperAdmin();
+      
+      // Hanya superadmin yang bisa delete user
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Marriage Applications collection
+    match /marriageApplications/{applicationId} {
+      // Read access:
+      // - Superadmin: semua aplikasi
+      // - Admin KUA: semua aplikasi
+      // - Admin Dukcapil: semua aplikasi
+      // - User: hanya aplikasi sendiri
+      allow read: if isSuperAdmin() 
+                  || isAdminKUA() 
+                  || isAdminDukcapil() 
+                  || (isUser() && resource.data.userId == request.auth.uid);
+      
+      // Create: hanya user yang bisa create aplikasi baru
+      allow create: if isUser() 
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'created';
+      
+      // Update:
+      // - Superadmin: bisa update semua field
+      // - Admin KUA: bisa update status ke 'processed'
+      // - Admin Dukcapil: bisa update status ke 'validated' atau 'rejected'
+      // - User: bisa update aplikasi sendiri yang masih status 'created'
+      allow update: if isSuperAdmin()
+                    || (isAdminKUA() && request.resource.data.status == 'processed')
+                    || (isAdminDukcapil() && (request.resource.data.status == 'validated' || request.resource.data.status == 'rejected'))
+                    || (isUser() && resource.data.userId == request.auth.uid && resource.data.status == 'created');
+      
+      // Delete: hanya superadmin
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Logs collection
+    match /logs/{logId} {
+      // Read: semua admin bisa read logs
+      allow read: if isSuperAdmin() || isAdminKUA() || isAdminDukcapil();
+      
+      // Create: system-generated via Cloud Functions
+      allow create: if isAuthenticated();
+      
+      // Update & Delete: hanya superadmin
+      allow update, delete: if isSuperAdmin();
+    }
+  }
+}

@@ -1,0 +1,49 @@
+node_modules/
+build/
+.dart_tool/
+.packages
+.env
+.env.local
+.env.*.local
+.DS_Store
+coverage/
+dist/
+
+# Backend & Firebase
+backend/functions/node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Flutter
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/ios/Flutter/flutter_export_environment.sh
+frontend/ios/Pods/
+frontend/.pub-cache/
+frontend/.pub/
+
+# Misc
+*.iml
+*.class
+*.pyc
