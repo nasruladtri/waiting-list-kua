@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  firebase-emulators:
+    image: ${EMULATOR_IMAGE:-node:18-alpine}
+    build:
+      context: .
+      dockerfile: docker/emulators.Dockerfile
+    container_name: kua-emulators
+    restart: unless-stopped
+    ports:
+      - "${EMULATOR_UI_PORT:-4000}:4000"
+      - "${FIRESTORE_PORT:-8080}:8080"
+      - "${AUTH_PORT:-9099}:9099"
+      - "${STORAGE_PORT:-9199}:9199"
+      - "${FUNCTIONS_PORT:-5001}:5001"
+    volumes:
+      - emulator-data:/root/.cache/firebase/emulators
+      - ./backend:/workspace
+    environment:
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=auth:9099
+      - FIREBASE_STORAGE_EMULATOR_HOST=storage:9199
+      - FUNCTIONS_EMULATOR_HOST=functions:5001
+      - GCP_PROJECT=${FIREBASE_PROJECT:-kua-dev}
+    networks:
+      - kua-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  flutter-web:
+    image: ${FLUTTER_IMAGE:-flutter-web:latest}
+    build:
+      context: ./frontend
+      dockerfile: ../docker/flutter.Dockerfile
+    container_name: kua-webapp
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      firebase-emulators:
+        condition: service_healthy
+    environment:
+      - FIREBASE_EMULATOR_HOST=http://firebase-emulators:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=http://firebase-emulators:9099
+      - API_URL=http://firebase-emulators:5001
+      - APP_ENV=${APP_ENV:-production}
+    networks:
+      - kua-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kua-web.rule=Host(`kua.yourdomain.com`)"
+      - "traefik.http.services.kua-web.loadbalancer.server.port=80"
+
+volumes:
+  emulator-data:
+    driver: local
+
+networks:
+  kua-network:
+    driver: bridge
