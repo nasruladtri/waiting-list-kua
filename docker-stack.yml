@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   firebase-emulators:
-    image: node:18-alpine
+    image: kua-emulators:latest
     build:
       context: .
       dockerfile: docker/emulators.Dockerfile
