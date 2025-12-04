@@ -8,7 +8,7 @@ services:
       args:
         BUILDKIT_INLINE_CACHE: "0"
       no_cache: true
-    image: kua-emulators:v4
+    image: kua-emulators:v5
     container_name: kua-emulators
     restart: unless-stopped
     ports:

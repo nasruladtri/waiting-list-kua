@@ -11,7 +11,7 @@ RUN npm install -g firebase-tools@latest
 
 WORKDIR /workspace
 
-ENV CACHE_BUST=2025-12-04-11-07-FORCE-REBUILD
+ENV CACHE_BUST=2025-12-04-11-32-FINAL-FIX
 
 COPY backend/firebase.json .
 COPY backend/.firebaserc .
