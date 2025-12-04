@@ -3,48 +3,44 @@ version: '3.8'
 services:
   firebase-emulators:
     image: node:18-alpine
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      resources:
-        limits:
-          memory: 512M
+    build:
+      context: .
+      dockerfile: docker/emulators.Dockerfile
+    container_name: kua-emulators
+    restart: unless-stopped
     ports:
-      - target: 4000
-        published: 4000
-        protocol: tcp
-      - target: 8080
-        published: 8080
-        protocol: tcp
-      - target: 9099
-        published: 9099
-        protocol: tcp
-      - target: 9199
-        published: 9199
-        protocol: tcp
-      - target: 5001
-        published: 5001
-        protocol: tcp
+      - "4000:4000"   # Emulator UI
+      - "8080:8080"   # Firestore
+      - "9099:9099"   # Authentication
+      - "9199:9199"   # Storage
+      - "5001:5001"   # Cloud Functions
     volumes:
       - emulator-data:/root/.cache/firebase/emulators
-    command: >
-      sh -c "npm install -g firebase-tools &&
-             firebase emulators:start --project=kua-dev --import=./seed-data"
-    
+      - ./backend:/workspace
+    environment:
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=auth:9099
+      - FIREBASE_STORAGE_EMULATOR_HOST=storage:9199
+      - FUNCTIONS_EMULATOR_HOST=functions:5001
+      - GCP_PROJECT=kua-dev
+    networks:
+      - kua-network
+
   flutter-web:
     image: nginx:alpine
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    container_name: kua-webapp
+    restart: unless-stopped
     ports:
-      - target: 80
-        published: 8080
-        protocol: tcp
+      - "8081:80"   # Flutter web di port 8081, karena 8080 sudah dipakai emulator
     volumes:
-      - ./frontend/build/web:/usr/share/nginx/html:ro
+      - ./frontend/build/web:/usr/share/nginx/html
+    networks:
+      - kua-network
 
 volumes:
   emulator-data:
     driver: local
+
+networks:
+  kua-network:
+    driver: bridge
