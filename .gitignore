@@ -1,8 +1,0 @@
-node_modules/
-build/
-.dart_tool/
-.packages
-.env
-.DS_Store
-coverage/
-dist/
