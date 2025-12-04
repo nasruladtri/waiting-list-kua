@@ -5,7 +5,10 @@ services:
     build:
       context: .
       dockerfile: docker/emulators.Dockerfile
-    image: kua-emulators:v3
+      args:
+        BUILDKIT_INLINE_CACHE: "0"
+      no_cache: true
+    image: kua-emulators:v4
     container_name: kua-emulators
     restart: unless-stopped
     ports:
